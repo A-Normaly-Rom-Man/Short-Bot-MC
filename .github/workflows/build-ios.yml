@@ -1,30 +1,22 @@
-name: Build iOS IPA
-
-# Required repository secrets: IOS_CERTIFICATE_BASE64, IOS_CERTIFICATE_PASSWORD,
-# IOS_PROVISIONING_PROFILE_BASE64 (Ad Hoc profile for com.bot.minecraft),
-# and IOS_TEAM_ID. The profile must include the target iPad's registered UDID.
-permissions:
-  contents: read
+name: Build Unsigned iOS IPA
 
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - main
-      - master
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: macos-latest
+
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
-          node-version: 22
-          cache: npm
+          node-version: 18
 
       - name: Install dependencies
         run: npm ci
@@ -32,93 +24,26 @@ jobs:
       - name: Sync Capacitor iOS project
         run: npx cap sync ios
 
-      - name: Validate signing secrets
-        env:
-          IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
-          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
-          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
-          IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+      - name: Build Xcode Project (Archive)
         run: |
-          set -euo pipefail
-          test -n "$IOS_CERTIFICATE_BASE64"
-          test -n "$IOS_CERTIFICATE_PASSWORD"
-          test -n "$IOS_PROVISIONING_PROFILE_BASE64"
-          test -n "$IOS_TEAM_ID"
-
-      - name: Import Apple signing certificate
-        uses: apple-actions/import-codesign-certs@v3
-        with:
-          p12-file-base64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
-          p12-password: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
-
-      - name: Install provisioning profile
-        id: profile
-        env:
-          PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
-        run: |
-          set -euo pipefail
-          profile_dir="$HOME/Library/MobileDevice/Provisioning Profiles"
-          mkdir -p "$profile_dir"
-          profile_path="$RUNNER_TEMP/profile.mobileprovision"
-          printf '%s' "$PROFILE_BASE64" | base64 -D > "$profile_path"
-          security cms -D -i "$profile_path" > "$RUNNER_TEMP/profile.plist"
-          profile_uuid=$(/usr/libexec/PlistBuddy -c 'Print UUID' "$RUNNER_TEMP/profile.plist")
-          cp "$profile_path" "$profile_dir/$profile_uuid.mobileprovision"
-          echo "uuid=$profile_uuid" >> "$GITHUB_OUTPUT"
-
-      - name: Archive app
-        env:
-          TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
-          PROFILE_UUID: ${{ steps.profile.outputs.uuid }}
-        run: |
-          set -euo pipefail
-          xcodebuild \
-            -project ios/App/App.xcodeproj \
+          xcodebuild build \
+            -workspace ios/App/App.xcworkspace \
             -scheme App \
+            -sdk iphoneos \
             -configuration Release \
-            -destination 'generic/platform=iOS' \
-            -archivePath "$RUNNER_TEMP/MinecraftBot.xcarchive" \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY='Apple Distribution' \
-            DEVELOPMENT_TEAM="$TEAM_ID" \
-            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_UUID" \
-            archive
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
 
-      - name: Export IPA
-        env:
-          TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
-          PROFILE_UUID: ${{ steps.profile.outputs.uuid }}
+      - name: Package IPA
         run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import os
-          import plistlib
+          mkdir -p Payload
+          cp -r build/Build/Products/Release-iphoneos/App.app Payload/
+          zip -r ShortBot.ipa Payload
 
-          options = {
-              "method": "ad-hoc",
-              "signingStyle": "manual",
-              "teamID": os.environ["TEAM_ID"],
-              "provisioningProfiles": {
-                  "com.bot.minecraft": os.environ["PROFILE_UUID"],
-              },
-          }
-          with open("ExportOptions.plist", "wb") as output:
-              plistlib.dump(options, output)
-          PY
-          xcodebuild \
-            -exportArchive \
-            -archivePath "$RUNNER_TEMP/MinecraftBot.xcarchive" \
-            -exportPath "$RUNNER_TEMP/export" \
-            -exportOptionsPlist ExportOptions.plist
-          mkdir -p build
-          ipa_path=$(find "$RUNNER_TEMP/export" -type f -name '*.ipa' -print -quit)
-          test -n "$ipa_path"
-          cp "$ipa_path" build/MinecraftBot.ipa
-
-      - name: Upload IPA
-        uses: actions/upload-artifact@v4
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v3
         with:
-          name: MinecraftBot-ipa
-          path: build/MinecraftBot.ipa
-          if-no-files-found: error
-          retention-days: 14
+          name: ShortBot-Unsigned-IPA
+          path: ShortBot.ipa
