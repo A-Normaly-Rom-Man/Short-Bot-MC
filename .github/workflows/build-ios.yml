@@ -2,51 +2,73 @@ name: Build Unsigned iOS IPA
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
-  build:
+  build-ios-ipa:
+    name: Build Unsigned iOS IPA
     runs-on: macos-latest
 
+    permissions:
+      contents: read
+
     steps:
-      - name: Check out source
+      - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
+          cache: npm
 
       - name: Install dependencies
         run: npm install
 
-      - name: Add iOS Platform
-        run: npx cap add ios || true
-
       - name: Sync Capacitor iOS project
         run: npx cap sync ios
 
-      - name: Build Xcode Project
+      - name: Build unsigned iOS app with Xcode
         run: |
-          xcodebuild build \
-            -workspace ios/App/App.xcworkspace \
+          set -e
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
             -scheme App \
-            -sdk iphoneos \
             -configuration Release \
-            -derivedDataPath build \
-            CODE_SIGN_IDENTITY="" \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath ios/build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGN_IDENTITY="" \
+            build
 
-      - name: Package IPA
+      - name: Package unsigned IPA
         run: |
-          mkdir -p Payload
-          cp -r build/Build/Products/Release-iphoneos/App.app Payload/
-          zip -r ShortBot.ipa Payload
+          set -e
 
-      - name: Upload IPA Artifact
+          APP_PATH=$(find ios/build/DerivedData -path "*/Build/Products/Release-iphoneos/*.app" -print -quit)
+
+          if [ -z "$APP_PATH" ]; then
+            echo "No .app bundle found in Release-iphoneos build output."
+            find ios/build/DerivedData -maxdepth 6 -type d | head -n 50
+            exit 1
+          fi
+
+          rm -rf Payload
+          mkdir -p Payload
+
+          cp -R "$APP_PATH" Payload/
+
+          zip -qr ShortBot.ipa Payload
+
+          ls -l ShortBot.ipa
+
+      - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: ShortBot-Unsigned-IPA
           path: ShortBot.ipa
+          if-no-files-found: error
