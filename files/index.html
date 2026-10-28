@@ -1,0 +1,661 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#07111f">
+  <title>Minecraft Bot Paneli</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07111f;
+      --panel: #101a2b;
+      --panel2: #17243a;
+      --line: #24425d;
+      --border-soft: #2a405b;
+      --text: #dbeafe;
+      --muted: #9aafc8;
+      --green: #4ade80;
+      --blue: #22d3ee;
+      --focus: #22d3ee;
+      --focus-glow: #22d3ee28;
+      --button-text: #04131c;
+      --red: #ff6875;
+      --amber: #ffd166;
+      --header-bg: #0b1422;
+      --card-start: #101a2b;
+      --metric-bg: #142238;
+      --input-bg: #0e192a;
+      --output-bg: #091321;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background-color: var(--bg); background-image: var(--page-image, none); background-size: cover; background-position: center; background-attachment: fixed; color: var(--text); font: 14px/1.45 system-ui, "Segoe UI", sans-serif; }
+    header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px max(18px, calc((100vw - 1180px) / 2)); border-bottom: 1px solid var(--line); background: var(--header-bg); }
+    h1 { margin: 0; font-size: 20px; } h2 { margin: 0 0 14px; font-size: 16px; }
+    .muted { color: var(--muted); } main { max-width: 1180px; margin: 22px auto; padding: 0 18px; }
+    .layout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .column { display: grid; align-content: start; gap: 16px; min-width: 0; }
+    .card { padding: 17px; border: 1px solid var(--line); border-radius: 12px; background: #181825; min-width: 0; box-shadow: 0 8px 24px #02081270; transition: border-color .2s ease, background-color .2s ease, box-shadow .2s ease, transform .2s ease; }
+    .card:hover { border-color: var(--focus); box-shadow: 0 10px 28px #02081270, 0 0 18px color-mix(in srgb, var(--focus) 12%, transparent); transform: translateY(-1px); }
+    .statusline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .badge { display: inline-flex; align-items: center; border-radius: 99px; padding: 5px 10px; background: var(--panel2); font-weight: 650; }
+    .dot { width: 8px; height: 8px; background: var(--amber); border-radius: 50%; }
+    .dot.connected { background: var(--green); } .dot.disconnected { background: var(--red); }
+    .actions { display: flex; gap: 8px; margin-left: auto; }
+    button { border: 1px solid var(--line); color: var(--text); background: var(--panel2); border-radius: 8px; padding: 9px 12px; font: inherit; cursor: pointer; }
+    button { transition: transform .16s ease, box-shadow .16s ease, filter .16s ease, background-color .16s ease; }
+    button:hover { filter: brightness(1.15); transform: translateY(-1px) scale(1.015); box-shadow: 0 4px 14px #0004; }
+    button:active { transform: translateY(0) scale(.99); }
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+    button.primary { color: var(--button-text); background: var(--accent, var(--blue)); border-color: var(--accent, var(--blue)); font-weight: 700; } button.danger { border-color: color-mix(in srgb, var(--red) 40%, var(--line)); color: color-mix(in srgb, var(--red) 75%, white); }
+    .metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+    .metric { padding: 12px; border-radius: 9px; background: var(--metric-bg); min-width: 0; overflow: hidden; }
+    .metric-label { display: block; color: var(--muted); font-size: 12px; }
+    .metric-value { display: block; margin-top: 4px; font-size: 17px; font-weight: 650; overflow-wrap: anywhere; }
+    .stat-icons { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 3px; align-items: center; width: min(100%, 180px); margin-top: 9px; min-height: 12px; overflow: hidden; }
+    .pixel-icon { position: relative; display: block; width: 100%; aspect-ratio: 1; min-width: 0; overflow: hidden; image-rendering: pixelated; filter: drop-shadow(1px 1px 0 #020713); }
+    .pixel-icon svg { display: block; width: 100%; height: 100%; shape-rendering: crispEdges; }
+    .icon-empty path { fill: #53647b; }
+    .icon-fill { position: absolute; inset: 0; overflow: hidden; width: 100%; clip-path: inset(0 100% 0 0); pointer-events: none; transition: clip-path .2s steps(4, end); }
+    .icon-fill svg { max-width: none; }
+    .pixel-icon.heart .icon-fill path { fill: #f04452; }
+    .pixel-icon.food .icon-fill path { fill: #d98a35; }
+    .pixel-icon.heart .icon-fill path { stroke: #ff9092; stroke-width: .35px; }
+    .pixel-icon.food .icon-fill path { stroke: #ffc16b; stroke-width: .35px; }
+    .warning { display: none; margin-top: 14px; padding: 11px 13px; border: 1px solid #8b3944; color: #ffdce0; background: #48252b; border-radius: 8px; font-weight: 700; }
+    .warning.show { display: block; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    label { display: block; color: var(--muted); font-size: 12px; }
+    input, select, textarea { display: block; width: 100%; margin-top: 5px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 7px; color: var(--text); background: var(--input-bg); font: inherit; transition: border-color .18s ease, box-shadow .18s ease; }
+    textarea { min-height: 92px; resize: vertical; }
+    input:focus, select:focus { border-color: var(--focus); box-shadow: 0 0 0 3px var(--focus-glow); }
+    input[type="checkbox"] { display: inline-block; width: auto; margin: 0 7px 0 0; accent-color: var(--green); }
+    .check { display: flex; align-items: center; min-height: 38px; color: var(--text); font-size: 13px; }
+    .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 38px; color: var(--text); font-size: 13px; }
+    .switch { position: relative; display: inline-flex; flex: 0 0 auto; align-items: center; width: 44px; height: 24px; }
+    .switch input { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; }
+    .switch-track { width: 100%; height: 100%; border: 1px solid var(--line); border-radius: 999px; background: var(--panel2); transition: background-color .18s ease, border-color .18s ease; }
+    .switch-track::after { position: absolute; top: 4px; left: 4px; width: 14px; height: 14px; border-radius: 50%; background: var(--muted); content: ""; transition: transform .18s ease, background-color .18s ease; }
+    .switch input:checked + .switch-track { border-color: var(--green); background: color-mix(in srgb, var(--green) 28%, var(--panel2)); }
+    .switch input:checked + .switch-track::after { transform: translateX(20px); background: var(--green); }
+    .switch input:focus-visible + .switch-track { outline: 2px solid var(--blue); outline-offset: 2px; }
+    .form-actions { display: flex; align-items: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+    .note { font-size: 11px; color: var(--muted); margin-top: 6px; }
+    .list { max-height: 190px; overflow: auto; padding: 0; margin: 0; list-style: none; }
+    .list li { padding: 6px 0; border-bottom: 1px solid var(--border-soft); overflow-wrap: anywhere; }
+    .output { height: 200px; padding: 10px; overflow: auto; background: var(--output-bg); border: 1px solid var(--line); border-radius: 8px; font: 12px/1.5 Consolas, monospace; box-shadow: inset 0 0 18px #02081255; }
+    .output div { overflow-wrap: anywhere; white-space: pre-wrap; animation: line-appear .2s ease-out both; }
+    @keyframes line-appear { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+    .chatform { position: relative; z-index: 100; display: flex; gap: 8px; margin-top: 9px; pointer-events: auto; }
+    .chatform input { position: relative; z-index: 100; margin: 0; pointer-events: auto; }
+    .chatform button { position: relative; z-index: 100; pointer-events: auto; }
+    .codebox { display: none; margin-top: 12px; padding: 11px; background: var(--input-bg); border: 1px solid var(--line); border-radius: 8px; overflow-wrap: anywhere; }
+    .codebox.show { display: block; } .codebox strong { color: var(--amber); font-size: 18px; letter-spacing: 1px; }
+    a { color: var(--blue); }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+    @media (max-width: 820px) { .layout, .live-layout { grid-template-columns: 1fr; } }
+    @media (max-width: 520px) { header { align-items: flex-start; flex-direction: column; } .header-tools { justify-items: start; width: 100%; } .statusline { width: 100%; } .actions { margin-left: auto; } .theme-menu-content { right: auto; left: 0; } .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .grid2, .sequence-fields, .chat-appearance-controls { grid-template-columns: 1fr; } .sequence-heading, .step-title-row { align-items: flex-start; flex-direction: column; } .output { height: 170px; } }
+    body[data-theme="dark"] {
+      --bg: #08090c; --panel: #12151a; --panel2: #1b2028; --line: #343b46;
+      --text: #eceff4; --muted: #a4aab5; --header-bg: #0d1015; --card-start: #171b21;
+      --metric-bg: #1b2028; --input-bg: #101319; --output-bg: #090b0f; --border-soft: #2a3039;
+      --green: #83d69b; --blue: #83c9ff; --focus: #568eb9; --focus-glow: #568eb922;
+    }
+    body[data-theme="minecraft"] {
+      --bg: #111a12; --panel: #1a261b; --panel2: #263528; --line: #405543;
+      --text: #e8efe2; --muted: #acbba7; --header-bg: #18231a; --card-start: #202e22;
+      --metric-bg: #263528; --input-bg: #172219; --output-bg: #101811; --border-soft: #394b3b;
+      --green: #8ac66a; --blue: #a3c9a0; --focus: #789c6c; --focus-glow: #789c6c24;
+    }
+    body[data-theme="amber"] {
+      --bg: #120d08; --panel: #1e140a; --panel2: #2d1e12; --line: #62431f;
+      --text: #fff2d6; --muted: #c5a878; --header-bg: #171006; --card-start: #24170c;
+      --metric-bg: #2d1e12; --input-bg: #1a1109; --output-bg: #120d08; --border-soft: #493319;
+      --green: #e9a83a; --blue: #f3c26b; --amber: #ffd166;
+      --focus: #cf9140; --focus-glow: #cf914029; --button-text: #211406;
+    }
+    body[data-theme="custom"] {
+      --panel: color-mix(in srgb, var(--bg) 78%, white);
+      --panel2: color-mix(in srgb, var(--bg) 64%, white);
+      --line: color-mix(in srgb, var(--bg) 42%, white);
+      --header-bg: color-mix(in srgb, var(--bg) 88%, black);
+      --card-start: color-mix(in srgb, var(--bg) 84%, white);
+      --metric-bg: color-mix(in srgb, var(--bg) 64%, white);
+      --input-bg: color-mix(in srgb, var(--bg) 86%, black);
+      --output-bg: color-mix(in srgb, var(--bg) 92%, black);
+      --border-soft: color-mix(in srgb, var(--line) 70%, transparent);
+      --focus: color-mix(in srgb, var(--bg) 45%, white);
+      --focus-glow: color-mix(in srgb, var(--focus) 15%, transparent);
+      --green: color-mix(in srgb, var(--bg) 35%, #58d68d);
+      --blue: color-mix(in srgb, var(--bg) 28%, #69b9ff);
+      --button-text: #101010;
+    }
+    body, body[data-theme] {
+      --panel: #101a2b;
+      --panel2: #17243a;
+      --line: color-mix(in srgb, var(--blue) 36%, #20334c);
+      --border-soft: #263a55;
+      --text: #dbeafe;
+      --muted: #9aafc8;
+      --header-bg: #0b1422;
+      --card-start: #101a2b;
+      --metric-bg: #142238;
+      --input-bg: #0e192a;
+      --output-bg: #091321;
+      --accent: var(--blue);
+      --button-text: #11111b;
+    }
+    h1, h2 { color: var(--accent); }
+    .theme-custom[hidden] { display: none; }
+    .tab-nav { display: flex; gap: 8px; overflow-x: auto; margin: 0 0 16px; padding: 4px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+    .tab-button { flex: 1 0 auto; border-color: transparent; }
+    .tab-button[aria-selected="true"] { color: var(--button-text); background: var(--accent); border-color: var(--accent); font-weight: 700; }
+    .tab-panel { min-width: 0; }
+    .tab-panel[hidden] { display: none; }
+    .app-shell { display: grid; grid-template-columns: 224px minmax(0, 1fr); gap: 20px; width: min(100%, 1600px); margin: 0 auto; padding: 0 20px; transition: grid-template-columns .24s ease; }
+    .sidebar { position: sticky; top: 16px; align-self: start; display: grid; gap: 14px; min-width: 0; margin-top: 22px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: linear-gradient(165deg, #111c2d, #091321); box-shadow: 0 12px 30px #02081270; }
+    .sidebar-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .sidebar-brand { color: #67e8f9; font: 800 12px/1.2 Consolas, monospace; letter-spacing: .14em; }
+    .sidebar-collapse { padding: 6px 9px; }
+    .sidebar-links { display: grid; gap: 6px; }
+    .sidebar-link { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 42px; text-align: left; }
+    .sidebar-link[aria-current="page"] { color: var(--button-text); border-color: var(--accent); background: var(--accent); font-weight: 700; }
+    .sidebar-icon { display: grid; flex: 0 0 24px; place-items: center; height: 24px; border: 1px solid currentColor; border-radius: 7px; font: 750 10px Consolas, monospace; }
+    .sidebar-label { overflow: hidden; white-space: nowrap; transition: opacity .18s ease, max-width .2s ease; }
+    body.sidebar-collapsed .app-shell { grid-template-columns: 76px minmax(0, 1fr); }
+    body.sidebar-collapsed .sidebar { padding-inline: 9px; }
+    body.sidebar-collapsed .sidebar-heading { justify-content: center; flex-wrap: wrap; }
+    body.sidebar-collapsed .sidebar-brand { display: none; }
+    body.sidebar-collapsed .sidebar-link { justify-content: center; padding-inline: 6px; }
+    body.sidebar-collapsed .sidebar-label { max-width: 0; opacity: 0; }
+    .app-shell > main { width: 100%; max-width: none; min-width: 0; margin: 22px 0; padding: 0; }
+    .live-layout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+    .live-layout > .column, .column > *, #settingsLiveSlot, #logsLiveSlot { min-width: 0; }
+    .header-tools { display: grid; justify-items: end; gap: 10px; }
+    .theme-menu { position: relative; z-index: 2; }
+    .theme-menu summary { padding: 8px 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel2); cursor: pointer; list-style: none; }
+    .theme-menu summary::-webkit-details-marker { display: none; }
+    .theme-menu summary::after { content: " ▾"; color: var(--muted); }
+    .theme-menu[open] summary::after { content: " ▴"; }
+    .theme-menu-content { position: absolute; top: calc(100% + 8px); right: 0; width: min(340px, calc(100vw - 36px)); padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); box-shadow: 0 14px 36px #0008; }
+    .theme-fields { display: grid; gap: 10px; }
+    .theme-color-control { display: flex; align-items: center; gap: 10px; }
+    .theme-color-control input[type="color"] { width: 48px; height: 38px; padding: 3px; }
+    .chat-color-control { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 0 12px; }
+    .chat-color-control select { width: min(100%, 230px); margin: 0; }
+    #chatOutput { height: 300px; background: var(--chat-output-bg, var(--output-bg)); color: var(--chat-palette-color, var(--text)); font-family: var(--chat-font, Consolas, monospace); }
+    #chatOutput.chat-palette-custom .chat-content,
+    #chatOutput.chat-palette-custom .chat-content * { color: var(--chat-palette-color) !important; }
+    .chat-appearance-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0 0 12px; }
+    .chat-appearance-controls input[type="color"] { height: 38px; padding: 3px; }
+    .daily-command-widget { display: grid; gap: 8px; margin-top: 14px; padding: 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel2); }
+    .daily-command-status { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13px; }
+    .quick-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 14px; }
+    .quick-actions button { flex: 1 1 190px; }
+    .afk-widget { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 14px; padding: 12px; border: 1px solid #22d3ee45; border-radius: 10px; background: linear-gradient(120deg, #08334466, #17255455); }
+    .log-filters { display: flex; flex-wrap: wrap; gap: 7px; margin: 0 0 10px; }
+    .log-filter[aria-pressed="true"] { border-color: var(--blue); color: #cffafe; background: #0e749044; box-shadow: 0 0 14px #22d3ee22; }
+    .inventory-window { display: grid; gap: 14px; margin-top: 12px; padding: 12px; border: 1px solid #263f5c; border-radius: 10px; background: #0b1320; }
+    .inventory-search { display: block; margin: 12px 0; }
+    .inventory-search input { margin: 0; }
+    .inventory-slot[hidden] { display: none; }
+    .developer-options { grid-column: 1 / -1; max-height: 0; margin-top: 0; overflow: hidden; opacity: 0; transform: translateY(8px); transition: max-height .24s ease, opacity .2s ease, transform .24s ease, margin .24s ease; }
+    .developer-options.is-visible { max-height: 1000px; margin-top: 12px; opacity: 1; transform: translateY(0); }
+    .developer-options[hidden] { display: block; max-height: 0; margin-block: 0; padding-block: 0; border-width: 0; opacity: 0; transform: translateY(8px); }
+    .inventory-slot { animation: slot-appear .16s ease-out both; }
+    @keyframes slot-appear { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
+    .inventory-section-title { margin: 0 0 6px; color: var(--muted); font-size: 11px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; }
+    .inventory-grid { display: grid; grid-template-columns: repeat(var(--cols, 9), minmax(0, 1fr)); gap: 4px; }
+    .inventory-grid.hotbar { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #263f5c; }
+    .inventory-slot-icon { display: block; flex: 0 0 42%; width: 42%; max-width: 42px; aspect-ratio: 1; object-fit: contain; image-rendering: pixelated; filter: drop-shadow(1px 1px 1px #0009); }
+    .inventory-slot { position: relative; display: flex; min-width: 0; aspect-ratio: 1; flex-direction: row; align-items: center; justify-content: center; gap: 4px; overflow: hidden; padding: 3px; border-color: #394b61; border-radius: 5px; background: linear-gradient(145deg, #2b3548, #1c2535); text-align: center; }
+    .inventory-slot.inventory-start { border-left: 3px solid var(--accent); }
+    .inventory-slot:disabled { cursor: default; opacity: .55; }
+    .inventory-slot:not(:disabled):hover { border-color: var(--accent); }
+    .inventory-slot-name { display: block; flex: 1; min-width: 0; overflow: hidden; font-size: clamp(7px, 1.5vw, 10px); line-height: 1.1; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+    .inventory-slot-id { color: var(--muted); font: 8px/1 Consolas, monospace; }
+    .inventory-slot-count { position: absolute; right: 3px; top: 2px; color: #fff; font: 700 10px/1 Consolas, monospace; text-shadow: 1px 1px 2px #000; }
+    .inventory-slot.empty { background: #111a29; box-shadow: inset 0 0 0 1px #26364b; }
+    .chest-automation-widget { display: grid; gap: 8px; margin-top: 14px; padding: 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel2); }
+    .chest-automation-status { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13px; }
+    #chatOutput .chat-own { margin: 3px 0; padding: 5px 7px; border-left: 3px solid transparent; border-radius: 3px 6px 6px 3px; }
+    #chatOutput .chat-own.chat-custom-color .chat-message-text,
+    #chatOutput .chat-own.chat-custom-color .chat-message-text * { color: var(--chat-own-color) !important; }
+    #settingsCard, #logCard { min-width: 0; }
+    #settingsTabSlot, #logsTabSlot { max-width: 880px; margin: 0 auto; }
+    .toast-stack { position: fixed; z-index: 10; top: 16px; right: 16px; display: grid; gap: 10px; width: min(420px, calc(100vw - 32px)); }
+    .toast { position: relative; padding: 13px 42px 13px 15px; border: 1px solid #a44854; border-left: 4px solid var(--red); border-radius: 10px; color: var(--text); background: var(--panel); box-shadow: 0 12px 32px #0008; animation: line-appear .2s ease-out both; opacity: 1; transform: translateX(0); transition: opacity .25s ease, transform .25s ease; }
+    .toast.is-leaving { opacity: 0; transform: translateX(12px); }
+    .toast-close { position: absolute; top: 7px; right: 7px; min-width: 28px; padding: 2px 7px; border: 0; background: transparent; color: var(--muted); font-size: 20px; line-height: 1.2; }
+    .toast-close:hover { color: var(--text); background: transparent; box-shadow: none; transform: none; }
+    .toast strong { display: block; margin-bottom: 4px; padding-right: 4px; }
+    .toast code { color: #ffadb4; font: 700 12px Consolas, monospace; }
+    .toast p { margin: 6px 0 0; color: var(--muted); }
+    .version-list { display: grid; grid-template-columns: minmax(130px, .7fr) 1fr; gap: 10px; margin: 0; }
+    .version-list dt { color: var(--muted); }
+    .version-list dd { margin: 0; overflow-wrap: anywhere; }
+    body { background-image: radial-gradient(ellipse at 12% 0%, #22d3ee16, transparent 34%), radial-gradient(ellipse at 88% 10%, #8b5cf61a, transparent 32%), var(--page-image, none); }
+    header { position: sticky; top: 0; z-index: 5; border-bottom-color: #22d3ee40; backdrop-filter: blur(20px); background: color-mix(in srgb, #07111f 82%, transparent); box-shadow: 0 12px 32px #02061770, 0 1px #22d3ee15; }
+    .card { border-color: color-mix(in srgb, var(--blue) 26%, var(--line)); background: linear-gradient(145deg, #111e31eF, #0b1728eF); box-shadow: 0 14px 38px #02061785, inset 0 1px #ffffff0c; backdrop-filter: blur(18px); }
+    .card:hover { border-color: color-mix(in srgb, var(--blue) 70%, var(--line)); box-shadow: 0 16px 40px #02061795, 0 0 24px color-mix(in srgb, var(--blue) 16%, transparent); }
+    .badge { border: 1px solid color-mix(in srgb, var(--blue) 30%, transparent); }
+    .dot { box-shadow: 0 0 12px currentColor; }
+    .dot.connected { color: #4ade80; }
+    .dot.disconnected { color: #fb7185; }
+    #connect { color: #04130a; background: linear-gradient(135deg, #4ade80, #22c55e); border-color: #4ade80; box-shadow: 0 0 18px #22c55e30; font-weight: 750; }
+    #disconnect { color: #fff1f2; background: linear-gradient(135deg, #fb7185, #e11d48); border-color: #fb7185; box-shadow: 0 0 18px #fb718530; font-weight: 750; }
+    .quick-actions button, .chest-automation-widget button, .daily-command-widget button { box-shadow: 0 0 18px #22d3ee16; }
+    input, select, textarea { border-radius: 9px; background: color-mix(in srgb, var(--input-bg) 88%, transparent); }
+    .sequence-card { grid-column: 1 / -1; padding: 17px; border: 1px solid #22d3ee55; border-radius: 14px; background: linear-gradient(135deg, #0e74901c, #312e811b 58%, #052e1a20); box-shadow: 0 0 24px #22d3ee12, inset 0 1px #ffffff10; }
+    .sequence-heading, .step-title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .sequence-heading h3 { margin: 4px 0 0; color: var(--text); font-size: 17px; }
+    .sequence-heading h3 span { color: var(--muted); font-size: 12px; font-weight: 500; }
+    .eyebrow { color: #67e8f9; font: 750 10px/1.2 Consolas, monospace; letter-spacing: .16em; }
+    .sequence-toggle { flex: 0 0 auto; }
+    .sequence-status { color: #86efac; }
+    .sequence-status.is-off { color: #fda4af; }
+    .sequence-steps { display: grid; gap: 11px; margin-top: 13px; }
+    .sequence-step { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 12px; padding: 13px; border: 1px solid color-mix(in srgb, var(--blue) 19%, var(--line)); border-radius: 11px; background: #050b1680; }
+    .step-number { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid #22d3ee65; border-radius: 10px; color: #67e8f9; background: #0891b21c; font: 800 12px Consolas, monospace; }
+    .step-content { min-width: 0; }
+    .step-content h4 { margin: 1px 0 9px; color: var(--text); font-size: 13px; }
+    .sequence-fields { display: grid; grid-template-columns: 1.2fr .8fr; gap: 11px; }
+    .step-title-row h4 { margin: 1px 0 9px; }
+    .step-title-row > .switch-row { flex: 0 0 auto; min-height: 26px; }
+    #logOutput .log-info { color: #86efac; text-shadow: 0 0 10px #22c55e22; }
+    #logOutput .log-warn { color: #fcd34d; }
+    #logOutput .log-error { color: #fda4af; text-shadow: 0 0 10px #fb718522; }
+    #logOutput .log-chat { color: #67e8f9; }
+    #logOutput .log-test { color: #67e8f9; }
+    @media (max-width: 820px) {
+      .layout, .live-layout { grid-template-columns: minmax(0, 1fr); }
+      .app-shell { grid-template-columns: minmax(0, 1fr); gap: 0; }
+      .sidebar { position: sticky; z-index: 5; top: 0; grid-template-columns: auto minmax(0, 1fr); align-items: center; margin-top: 10px; padding: 8px; }
+      .sidebar-heading { justify-content: start; }
+      .sidebar-brand { display: none; }
+      .sidebar-links { display: flex; min-width: 0; gap: 6px; overflow-x: auto; }
+      .sidebar-link { flex: 0 0 auto; width: auto; min-height: 38px; }
+      .sidebar-label { max-width: 160px; opacity: 1; }
+      body.sidebar-collapsed .app-shell { grid-template-columns: minmax(0, 1fr); }
+      body.sidebar-collapsed .sidebar { grid-template-columns: auto; }
+      body.sidebar-collapsed .sidebar-links { display: none; }
+      .app-shell > main { margin-top: 12px; }
+    }
+    @media (max-width: 520px) {
+      .grid2, .sequence-fields { grid-template-columns: minmax(0, 1fr); }
+      .sequence-heading, .step-title-row { align-items: flex-start; flex-direction: column; }
+    }
+  
+    /* ── iPadOS / Safari / dokunmatik uyumluluk ── */
+    html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+    body { padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
+    header { padding-top: max(0px, env(safe-area-inset-top, 0px)); }
+    button, [role="button"], summary, label.check, .sidebar-link, select { touch-action: manipulation; -webkit-touch-callout: none; }
+    input, select, textarea { font-size: max(16px, 1em); } /* iOS odaklanınca otomatik yakınlaştırmayı engeller */
+    .inventory-grid, .output, .log-output { -webkit-overflow-scrolling: touch; }
+    @media (pointer: coarse) {
+      button, select, input:not([type="checkbox"]):not([type="radio"]) { min-height: 44px; }
+      .inventory-slot { min-height: 44px; min-width: 44px; }
+      .check input[type="checkbox"], .check input[type="radio"] { width: 22px; height: 22px; }
+    }
+    @media (hover: none) {
+      .card:hover, button:hover, .inventory-slot:hover { transform: none; filter: none; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toast-stack" id="toastStack" aria-live="assertive" aria-atomic="false"></div>
+  <header>
+    <div><h1>Minecraft Bot Paneli</h1><span class="muted">Yerel bağlantı · Java Sürümü <span id="headerMinecraftVersion">1.21.4</span></span></div>
+    <div class="header-tools">
+      <div class="statusline">
+        <span class="dot" id="statusDot"></span><span class="badge" id="status">Panel bağlanıyor…</span>
+        <div class="actions"><button class="primary" id="connect">Bağlan</button><button class="danger" id="disconnect" hidden>Bağlantıyı Kes</button></div>
+      </div>
+      <details class="theme-menu">
+        <summary>Bot sunucusu bağlantısı</summary>
+        <div class="theme-menu-content">
+          <div class="theme-fields">
+            <label for="panelUrl">Panel API adresi
+              <input id="panelUrl" type="url" inputmode="url" placeholder="https://bot.example.com veya http://bot.local:3000">
+            </label>
+            <label for="panelToken">Panel erişim anahtarı
+              <input id="panelToken" type="password" autocomplete="current-password" placeholder="Uzak erişimde sunucu anahtarı gerekir">
+            </label>
+            <button id="savePanelConnection" type="button">Bağlan ve kaydet</button>
+            <span class="note">Yerel kullanımda anahtar gerekmez. Uzaktan erişimde PANEL_ACCESS_TOKEN ile eşleşen en az 32 karakterli anahtarı girin; HTTPS veya VPN kullanın. Anahtar bu cihazda saklanır.</span>
+          </div>
+        </div>
+      </details>
+      <details class="theme-menu">
+        <summary>Arayüz &amp; Tema Ayarları</summary>
+        <div class="theme-menu-content">
+          <div class="theme-fields">
+            <label for="themeSelect">Arka plan teması
+              <select id="themeSelect">
+                <option value="navy">Koyu Mavi</option>
+                <option value="dark">Gece Siyahı</option>
+                <option value="minecraft">Koyu Yeşil / Minecraft</option>
+                <option value="amber">Turuncu / Amber</option>
+                <option value="custom">Özel renk</option>
+              </select>
+            </label>
+            <div class="theme-custom" id="customThemeFields" hidden>
+              <label class="theme-color-control" for="customBackground">Özel arka plan rengi
+                <input id="customBackground" type="color" value="#152238">
+              </label>
+              <button id="applyCustomTheme" type="button">Özel rengi uygula</button>
+            </div>
+            <span class="note" id="themeMessage" aria-live="polite">Tema tercihiniz bu tarayıcıda saklanır.</span>
+          </div>
+        </div>
+      </details>
+    </div>
+  </header>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Panel gezinme">
+      <div class="sidebar-heading">
+        <span class="sidebar-brand">MINECRAFT BOT</span>
+        <button id="sidebarCollapse" class="sidebar-collapse" type="button" aria-label="Yan menüyü daralt" aria-expanded="true" title="Yan menüyü daralt">‹</button>
+      </div>
+      <nav class="sidebar-links" aria-label="Hızlı gezinme">
+        <button class="sidebar-link" type="button" data-sidebar-target="homeSection" aria-current="page"><span class="sidebar-icon" aria-hidden="true">⌂</span><span class="sidebar-label">Ana sayfa</span></button>
+        <button class="sidebar-link" type="button" data-sidebar-target="chatSection"><span class="sidebar-icon" aria-hidden="true">C</span><span class="sidebar-label">Canlı sohbet</span></button>
+        <button class="sidebar-link" type="button" data-sidebar-target="inventorySection"><span class="sidebar-icon" aria-hidden="true">I</span><span class="sidebar-label">Envanter / sandık</span></button>
+        <button class="sidebar-link" type="button" data-sidebar-target="logCard"><span class="sidebar-icon" aria-hidden="true">L</span><span class="sidebar-label">Loglar</span></button>
+        <button class="sidebar-link" type="button" data-sidebar-target="developerOptions"><span class="sidebar-icon" aria-hidden="true">D</span><span class="sidebar-label">Geliştirici ayarları</span></button>
+      </nav>
+    </aside>
+  <main>
+    <nav class="tab-nav" role="tablist" aria-label="Panel bölümleri">
+      <button class="tab-button" id="tabButton-live" role="tab" aria-selected="true" aria-controls="tab-live">Canlı Durum</button>
+      <button class="tab-button" id="tabButton-settings" role="tab" aria-selected="false" aria-controls="tab-settings" tabindex="-1">Ayarlar</button>
+      <button class="tab-button" id="tabButton-version" role="tab" aria-selected="false" aria-controls="tab-version" tabindex="-1">Sürüm Bilgisi</button>
+      <button class="tab-button" id="tabButton-logs" role="tab" aria-selected="false" aria-controls="tab-logs" tabindex="-1">Genişletilmiş Loglar</button>
+    </nav>
+    <section class="tab-panel" id="tab-live" role="tabpanel" aria-labelledby="tabButton-live">
+      <div class="live-layout">
+        <div class="column">
+          <section class="card" id="homeSection">
+            <h2>Canlı durum</h2>
+            <div class="metrics">
+              <div class="metric"><span class="metric-label">Can</span><span class="metric-value" id="health">—</span><div class="stat-icons" id="healthIcons" role="img" aria-label="Can bilgisi yok"></div></div>
+              <div class="metric"><span class="metric-label">Açlık</span><span class="metric-value" id="food">—</span><div class="stat-icons" id="foodIcons" role="img" aria-label="Açlık bilgisi yok"></div></div>
+              <div class="metric"><span class="metric-label">Doygunluk</span><span class="metric-value" id="saturation">—</span></div>
+              <div class="metric"><span class="metric-label">Deneyim seviyesi</span><span class="metric-value" id="experience">—</span></div>
+              <div class="metric"><span class="metric-label">Koordinatlar</span><span class="metric-value" id="position">—</span></div>
+              <div class="metric"><span class="metric-label">Boyut</span><span class="metric-value" id="dimension">—</span></div>
+              <div class="metric"><span class="metric-label">Ping</span><span class="metric-value" id="ping">—</span></div>
+              <div class="metric"><span class="metric-label">Bağlı kalma</span><span class="metric-value" id="uptime">00:00:00</span></div>
+              <div class="metric"><span class="metric-label">Oyun içi saat</span><span class="metric-value" id="gameTime">—</span></div>
+              <div class="metric"><span class="metric-label">Oyuncu sayısı</span><span class="metric-value" id="playerCount">0</span></div>
+              <div class="metric"><span class="metric-label">Eldeki eşya</span><span class="metric-value" id="heldItem">—</span></div>
+              <div class="metric"><span class="metric-label">Son kopma sebebi</span><span class="metric-value" id="disconnectReason">—</span></div>
+              <div class="metric"><span class="metric-label">Son hata kodu</span><span class="metric-value" id="lastErrorCode">—</span></div>
+            </div>
+            <div class="warning" id="healthWarning">⚠ Can kritik seviyede (6 veya daha az)!</div>
+            <div class="quick-actions">
+              <button class="primary" id="restartBot" type="button">Botu Yeniden Başlat</button>
+              <button id="triggerAntiAfk" type="button">Anti-AFK Tetikle</button>
+            </div>
+            <div class="afk-widget">
+              <strong>Anti-AFK zamanlayıcısı</strong>
+              <span id="antiAfkCountdown" aria-live="polite">Durum bekleniyor…</span>
+            </div>
+            <h2 style="margin-top:18px">Çevrimiçi oyuncular</h2>
+            <ul class="list" id="players"><li class="muted">—</li></ul>
+            <h2 style="margin-top:18px">Hızlı erişim çubuğu</h2>
+            <ul class="list" id="hotbar"><li class="muted">—</li></ul>
+            <div class="codebox" id="msaBox">Microsoft hesabı girişi: <a id="msaLink" href="#" target="_blank" rel="noreferrer">Giriş sayfasını aç</a><br>Kod: <strong id="msaCode">—</strong></div>
+          </section>
+          <section class="card" id="inventorySection">
+            <h2 id="inventoryTitle">Minecraft envanteri / sandık</h2>
+            <p class="note" id="inventoryStatus" aria-live="polite">Bot bir pencere açtığında slotlar burada görüntülenir.</p>
+            <label class="inventory-search" for="inventorySearch">
+              <span>Eşya ara</span>
+              <input id="inventorySearch" type="search" maxlength="80" placeholder="Ad veya eşya kimliği yazın…">
+            </label>
+            <p class="note" id="inventorySearchStatus" aria-live="polite"></p>
+            <div id="inventoryGrid" role="grid" aria-label="Minecraft pencere slotları"></div>
+            <div class="chest-automation-widget">
+              <div class="chest-automation-status">
+                <strong>Sandık otomasyonu</strong>
+                <span id="chestAutomationCountdown" aria-live="polite">Durum bekleniyor…</span>
+              </div>
+              <span class="note" id="chestAutomationMessage">Durum bekleniyor…</span>
+              <button class="primary" id="triggerChestDeposit" type="button">Şimdi Sandığa Eşya Koy</button>
+            </div>
+            <div class="daily-command-widget">
+              <div class="daily-command-status">
+                <strong>/gunluk zamanlayıcısı</strong>
+                <span id="dailyCommandCountdown" aria-live="polite">Durum bekleniyor…</span>
+              </div>
+              <button class="primary" id="triggerDailyCommand" type="button">Şimdi /gunluk Gönder</button>
+            </div>
+          </section>
+          <section class="card" id="chatSection">
+            <h2>Son bağlantı</h2><div id="lastKick" class="muted">Henüz bağlantı olayı yok.</div>
+            <p class="note">Panel istemcisi yokken canlı durum güncelleme döngüsü durur.</p>
+          </section>
+        </div>
+        <div class="column">
+          <div id="settingsLiveSlot">
+            <section class="card" id="settingsCard">
+              <h2>Ayarlar</h2>
+              <form id="settings">
+                <div class="grid2">
+                  <label>Sunucu adresi<input id="host" maxlength="255" autocomplete="off" placeholder="play.example.net"></label>
+                  <label>Sunucu portu<input id="serverPort" type="number" min="1" max="65535" value="25565"></label>
+                  <label>Kullanıcı adı<input id="username" maxlength="16" autocomplete="off"></label>
+                  <label>Giriş tipi<select id="auth"><option value="offline">Çevrimdışı hesap</option><option value="microsoft">Microsoft hesabı</option></select></label>
+                  <label>Minecraft Sürümü
+                    <select id="minecraftVersion">
+                      <option value="1.21.4">1.21.4</option>
+                      <option value="1.21.1">1.21.1</option>
+                      <option value="1.20.4">1.20.4</option>
+                      <option value="1.20.1">1.20.1</option>
+                    </select>
+                  </label>
+                  <label style="grid-column:1/-1">Sunucu şifre komutu<input id="serverCommand" type="password" maxlength="256" autocomplete="new-password" placeholder="Kaydedilmiş komut değişmeden kalır"></label>
+                  <label class="check"><input id="clearCommand" type="checkbox"> Kayıtlı şifre komutunu sil</label>
+                </div>
+                <p class="note">Şifre komutu gizli tutulur. Sürüm değişikliği bağlı botu yeni sürümle yeniden bağlar.</p>
+                <div class="grid2" style="margin-top:12px">
+                  <label class="check"><input id="antiEnabled" type="checkbox"> Anti-AFK açık</label>
+                  <label>Anti-AFK aralığı (saniye)<input id="afkMin" type="number" min="30" max="30" value="30" readonly></label>
+                  <label>Anti-AFK sonraki aralık (saniye)<input id="afkMax" type="number" min="30" max="30" value="30" readonly></label>
+                  <label class="check"><input id="reconnectEnabled" type="checkbox"> Otomatik yeniden bağlan</label>
+                  <label>Yeniden bağlanma beklemesi<input id="reconnectInitial" type="number" min="5" max="5" value="5" readonly></label>
+                  <label>En uzun bekleme<input id="reconnectMax" type="number" min="5" max="5" value="5" readonly></label>
+                  <label class="check"><input id="eatEnabled" type="checkbox"> Otomatik ye</label>
+                  <label>Açlık eşiği<input id="eatThreshold" type="number" min="1" max="20"></label>
+                  <section class="sequence-card">
+                    <div class="sequence-heading">
+                      <div><span class="eyebrow">SMART CHAT STATE MACHINE</span><h3>Giriş &amp; Komut Akışı <span>(Sequential Chain)</span></h3></div>
+                      <label class="switch-row sequence-toggle" for="sequentialFlowEnabled">
+                        <span>Zincir aktif</span>
+                        <span class="switch"><input id="sequentialFlowEnabled" type="checkbox" role="switch"><span class="switch-track"></span></span>
+                      </label>
+                    </div>
+                    <p class="note" id="sequentialFlowStatus" aria-live="polite">Giriş komutundan sonra 20 saniye beklenir, /skyblock gönderilir ve 20 saniye sonra oyun içi komut çalışır.</p>
+                    <div class="sequence-steps">
+                      <section class="sequence-step">
+                        <span class="step-number">01</span>
+                        <div class="step-content">
+                          <h4>Lobi geçiş komutu</h4>
+                          <div class="sequence-fields">
+                            <label>Komut
+                              <input id="firstServerCommand" type="text" maxlength="256" value="/skyblock" autocomplete="off" readonly>
+                            </label>
+                          </div>
+                          <p class="note">Giriş/şifre komutu spawn'dan 1 saniye sonra gönderilir. Ardından tam 20 saniye beklenir ve /skyblock yazılır; komuttan 20 saniye sonra oyun içi komut çalışır.</p>
+                        </div>
+                      </section>
+                      <section class="sequence-step">
+                        <span class="step-number">02</span>
+                        <div class="step-content">
+                          <div class="step-title-row">
+                            <h4>Oyun içi komut ve slotlar</h4>
+                            <label class="switch-row" for="autoClickerEnabled">
+                              <span>Aktif</span>
+                              <span class="switch"><input id="autoClickerEnabled" type="checkbox" role="switch"><span class="switch-track"></span></span>
+                            </label>
+                          </div>
+                          <div class="sequence-fields">
+                            <label>Komut
+                              <input id="autoClickerCommand" type="text" maxlength="256" placeholder="/günlük" autocomplete="off">
+                            </label>
+                            <label>Tıklanacak slotlar
+                              <input id="autoClickerSlots" type="text" inputmode="numeric" maxlength="215" placeholder="10, 11, 12, 13, 14, 15, 16" autocomplete="off">
+                            </label>
+                            <label>Tekrarlama aralığı (saat)
+                              <input id="autoClickerInterval" type="number" min="24" max="24" value="24" readonly>
+                            </label>
+                          </div>
+                        </div>
+                      </section>
+                    </div>
+                  </section>
+                  <section class="sequence-card" aria-labelledby="chestAutomationHeading">
+                    <div class="sequence-heading">
+                      <div><span class="eyebrow">DEPO YÖNETİMİ</span><h3 id="chestAutomationHeading">Gelişmiş Sandık Otomasyonu</h3></div>
+                      <label class="switch-row sequence-toggle" for="chestAutomationEnabled">
+                        <span>5 dakikalık döngü</span>
+                        <span class="switch"><input id="chestAutomationEnabled" type="checkbox" role="switch"><span class="switch-track"></span></span>
+                      </label>
+                    </div>
+                    <p class="note">Etkin olduğunda bot belirlenen aralıkta hedef koordinata (F3 verisi) yürür, yakındaki sandığı açar, biftek (cooked_beef) dışındaki eşyaları aktarır ve sandığı kapatır. Anti-AFK hareketi sürerken işlem iptal edilmez, hareket bitince başlar.</p>
+                    <div class="sequence-fields">
+                      <label>Hedef X koordinatı<input id="chestCoordinateX" type="number" step="1" min="-30000000" max="30000000"></label>
+                      <label>Hedef Y koordinatı<input id="chestCoordinateY" type="number" step="1" min="-2048" max="4096"></label>
+                      <label>Hedef Z koordinatı<input id="chestCoordinateZ" type="number" step="1" min="-30000000" max="30000000"></label>
+                    </div>
+                    <label style="margin-top:12px">Korunacak eşya adları (virgül veya satır ile ayırın)
+                      <textarea id="chestWhitelist" maxlength="4000" placeholder="cooked_beef&#10;steak&#10;biftek"></textarea>
+                    </label>
+                    <p class="note">Biftek eşya adları (cooked_beef, steak, biftek) her zaman korunur. Buraya eklenen adlar da korunacaktır.</p>
+                  </section>
+                  <label class="check"><input id="autoResponderEnabled" type="checkbox"> Sohbet oto-yanıtı açık</label>
+                  <label style="grid-column:1/-1">Oto-yanıt kuralları (her satır: kelime =&gt; yanıt)
+                    <textarea id="autoResponderRules" maxlength="8000" placeholder="merhaba => Merhaba {player}!&#10;nasılsın => İyiyim, teşekkürler!"></textarea>
+                  </label>
+                  <label style="grid-column:1/-1">Discord webhook URL (gizli)
+                    <input id="discordWebhook" type="password" maxlength="512" autocomplete="new-password" placeholder="Webhook ayarlı değil">
+                  </label>
+                  <label class="check"><input id="clearDiscordWebhook" type="checkbox"> Kayıtlı Discord webhook'unu sil</label>
+                  <label>Log seviyesi<select id="logLevel"><option value="error">Hata</option><option value="warn">Uyarı</option><option value="info">Bilgi</option></select></label>
+                  <label>Panel portu (değişiklik yeniden başlatınca)<input id="panelPort" type="number" min="1" max="65535"></label>
+                  <label class="check"><input id="openBrowser" type="checkbox"> Başlangıçta tarayıcıyı aç</label>
+                </div>
+                <section class="sequence-card developer-options" id="developerOptions" hidden inert aria-labelledby="developerOptionsHeading">
+                  <div class="sequence-heading">
+                    <div><span class="eyebrow">GELİŞTİRİCİ KONTROLLERİ</span><h3 id="developerOptionsHeading">Gelişmiş seçenekler</h3></div>
+                    <button id="closeDeveloperOptions" type="button">Menüyü Kapat</button>
+                  </div>
+                  <div class="sequence-fields" style="margin-top:12px">
+                    <label>Sandık aktarım aralığı (dakika)
+                      <input id="chestIntervalMinutes" type="number" min="1" max="1440" step="1" value="5" required>
+                    </label>
+                    <p class="note">1-1440 dakika. Değişiklik kaydedildiğinde yeni aralık hemen uygulanır; mevcut aktarım kesilmez.</p>
+                  </div>
+                  <div class="sequence-fields" style="margin-top:12px">
+                    <label class="check"><input id="envoyEnabled" type="checkbox"> Envoy/etkinlik algılama açık</label>
+                    <label style="grid-column:1/-1">Etkinlik anahtar kelimeleri (her satıra bir kelime; sunucu/sistem mesajlarında aranır)
+                      <textarea id="envoyKeywords" maxlength="1000" placeholder="envoy"></textarea>
+                    </label>
+                    <label>Envoy hedef X<input id="envoyCoordinateX" type="number" step="1" min="-30000000" max="30000000"></label>
+                    <label>Envoy hedef Y<input id="envoyCoordinateY" type="number" step="1" min="-2048" max="4096"></label>
+                    <label>Envoy hedef Z<input id="envoyCoordinateZ" type="number" step="1" min="-30000000" max="30000000"></label>
+                    <p class="note">Koordinatlar boşsa sandık otomasyonunun hedefi (608, 101, 3003) kullanılır. Etkinlik algılanınca standart sandık döngüsü askıya alınır, işlem bitince devam eder.</p>
+                    <div class="form-actions"><button id="triggerEnvoy" type="button">Envoy'u şimdi tetikle</button></div>
+                  </div>
+                  <div class="sequence-fields" style="margin-top:12px">
+                    <label style="grid-column:1/-1">API anahtarı (gizli; panele geri gönderilmez)
+                      <input id="apiKeyInput" type="password" maxlength="256" autocomplete="new-password" placeholder="API anahtarı ayarlı değil">
+                    </label>
+                    <label class="check"><input id="clearApiKey" type="checkbox"> Kayıtlı API anahtarını sil</label>
+                    <p class="note" id="apiKeyStatus">Anahtar yerel config.json içinde tutulur; log ve panelde maskelenir.</p>
+                  </div>
+                  <p class="note">Bu gizli menüyü klavyede DEL yazarak açıp kapatabilirsiniz. Arama veya sohbet/komut alanına DEL yazmak da menüyü açar/kapatır.</p>
+                </section>
+                <p class="note">Anti-AFK, giriş akışından bağımsız olarak her 30 saniyede bir zıplar, 800 ms ileri ve 800 ms geri yürür. Hareket ve loglar canlı panel akışına gönderilir.</p>
+                <p class="note">Sunucudan kick veya bağlantı kopması sonrası bot, otomatik yeniden bağlanma açıksa 5 saniye içinde tekrar bağlanır.</p>
+                <p class="note">Discord webhook URL'si yerel ayar dosyasında tutulur ve panele geri gönderilmez. Oto-yanıtta {player}, uygun oyuncu adıyla değiştirilir; aynı oyuncu/kural için 30 saniyelik bekleme vardır.</p>
+                <p class="note">/skyblock gönderildikten 20 saniye sonra ayarlardaki oyun içi komut çalışır ve 24 saatte bir tekrarlanır. Canlı Durum sekmesindeki buton elle /gunluk gönderir.</p>
+                <div class="form-actions"><button class="primary" type="submit">Kaydet</button><span class="muted" id="saveMessage"></span></div>
+              </form>
+            </section>
+          </div>
+          <section class="card">
+            <h2>Sohbet ve komutlar</h2>
+            <label class="chat-color-control" for="chatOwnColor">Kendi Mesaj Rengim
+              <select id="chatOwnColor" aria-label="Kendi mesaj rengim"></select>
+            </label>
+            <div class="chat-appearance-controls">
+              <label>Chat arka planı<input id="chatBackgroundColor" type="color" value="#11111b"></label>
+              <label>Yazı tipi
+                <select id="chatFont">
+                  <option value="system">Sistem</option>
+                  <option value="monospace">Monospace</option>
+                  <option value="serif">Serif</option>
+                  <option value="sans">Sans-serif</option>
+                </select>
+              </label>
+              <label>Renk paleti
+                <select id="chatPalette">
+                  <option value="minecraft">Minecraft renkleri</option>
+                  <option value="white">Beyaz</option>
+                  <option value="green">Terminal yeşili</option>
+                  <option value="blue">Buz mavisi</option>
+                  <option value="amber">Altın</option>
+                </select>
+              </label>
+            </div>
+            <div class="output" id="chatOutput" aria-live="polite"></div>
+            <form class="chatform" id="chatForm"><input id="chatInput" maxlength="256" placeholder="Mesaj veya /komut yazın" autocomplete="off"><button id="chatSend" type="submit">Gönder</button></form>
+          </section>
+          <div id="logsLiveSlot">
+            <section class="card" id="logCard">
+              <h2>Son Loglar (son 500 satır)</h2>
+              <div class="log-filters" role="group" aria-label="Log filtresi">
+                <button class="log-filter" type="button" data-log-filter="all" aria-pressed="true">Tümü</button>
+                <button class="log-filter" type="button" data-log-filter="chat" aria-pressed="false">SOHBET</button>
+                <button class="log-filter" type="button" data-log-filter="info" aria-pressed="false">BİLGİ</button>
+                <button class="log-filter" type="button" data-log-filter="warn" aria-pressed="false">UYARI</button>
+                <button class="log-filter" type="button" data-log-filter="error" aria-pressed="false">HATA</button>
+              </div>
+              <div class="output" id="logOutput" aria-live="polite"></div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="tab-panel" id="tab-settings" role="tabpanel" aria-labelledby="tabButton-settings" hidden>
+      <div id="settingsTabSlot"></div>
+    </section>
+    <section class="tab-panel" id="tab-version" role="tabpanel" aria-labelledby="tabButton-version" hidden>
+      <section class="card">
+        <h2>Sürüm Bilgisi</h2>
+        <p class="muted">Panelin ve botun çalışma ortamı bilgileri.</p>
+        <dl class="version-list">
+          <dt>Uygulama</dt><dd>Minecraft AFK Bot Paneli 1.0.0</dd>
+          <dt>Minecraft</dt><dd id="versionMinecraft">1.21.4</dd>
+          <dt>Node.js</dt><dd id="nodeVersion">Bağlantı bekleniyor…</dd>
+          <dt>Giriş desteği</dt><dd>Çevrimdışı / Microsoft hesabı</dd>
+        </dl>
+      </section>
+    </section>
+    <section class="tab-panel" id="tab-logs" role="tabpanel" aria-labelledby="tabButton-logs" hidden>
+      <div id="logsTabSlot"></div>
+    </section>
+  </main>
+  </div>
+  <script src="/socket.io/socket.io.js" defer></script>
+  <script src="/app.js" defer></script>
+</body>
+</html>

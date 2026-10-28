@@ -1,0 +1,44 @@
+{
+  "name": "minecraft-local-afk-panel",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mineflayer ile yerel Minecraft AFK botu ve kontrol paneli",
+  "main": "index.js",
+  "bin": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "service:install": "node install-service.js",
+    "service:uninstall": "node uninstall-service.js",
+    "build:exe": "pkg . --targets node22-win-x64 --output mc-afk-bot.exe",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:restart": "pm2 restart minecraft-afk-bot",
+    "pm2:stop": "pm2 stop minecraft-afk-bot",
+    "pm2:delete": "pm2 delete minecraft-afk-bot",
+    "pm2:status": "pm2 status",
+    "pm2:logs": "pm2 logs minecraft-afk-bot",
+    "pm2:save": "pm2 save"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@capacitor/cli": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/ios": "^8.5.3",
+    "express": "^5.1.0",
+    "mineflayer": "^4.32.0",
+    "node-windows": "^1.0.0-beta.8",
+    "socket.io": "^4.8.1",
+    "pm2": "^5.4.3"
+  },
+  "devDependencies": {
+    "@yao-pkg/pkg": "^6.23.0"
+  },
+  "pkg": {
+    "assets": [
+      "public/index.html",
+      "public/app.js",
+      "node_modules/socket.io/client-dist/socket.io.js"
+    ]
+  }
+}
